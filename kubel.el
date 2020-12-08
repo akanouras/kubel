@@ -579,6 +579,14 @@ ARGS is the arguments list from transient."
 	    (setenv "KUBECONFIG" (expand-file-name configfile))
       (error "Kubectl config file '%s' does not exist!" configfile))))
 
+;; Lifted from https://emacs.stackexchange.com/questions/21422/how-to-discard-stderr-when-running-a-shell-function#21432
+(defun kubel--shell-command-to-string-without-stderr (command)
+  "Emulate (shell-command-to-string) while discarding stderr."
+  (with-output-to-string
+    (with-current-buffer
+      standard-output
+      (process-file shell-file-name nil '(t nil) nil shell-command-switch command))))
+
 (defun kubel--can-get-namespace ()
   "Determine if permissions allow for `kubectl get namespace` in current context."
   (cond ((eq kubel-use-namespace-list 'on) t)
@@ -587,7 +595,7 @@ ARGS is the arguments list from transient."
            (unless kubel--can-get-namespace-cached
              (setq kubel--can-get-namespace-cached
                    (equal "yes\n"
-                          (shell-command-to-string
+                          (kubel--shell-command-to-string-without-stderr
                            (format "kubectl --context %s auth can-i list namespaces" kubel-context))))))
          kubel--can-get-namespace-cached)))
 
